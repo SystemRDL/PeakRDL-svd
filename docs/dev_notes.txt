@@ -1,0 +1,48 @@
+
+General structure is:
+
+
+--------------------------------------------------------------------------------
+Gotchyas
+--------------------------------------------------------------------------------
+- device:width implies a fixed "bus width"
+    This can basically be ignored on import
+    But for export, it means I'll have to enforce checks on accesswidth or something?
+    Probably not too strictly though. Registers still have their own width
+- peripheral:alternatePeripheral is analogous to type re-use
+    When importing, honor this
+    Use this when exporting ONLY if the type is purely identical (Type name didnt get mangled in any way)
+- peripheral:addressBlock can be defined multiple times
+    I dont think i need to care when importing... Just take the first one's offset?
+    I think this is so you can interleave blocks around each other. if thats the
+    case, then throw an error if there are multiple when importing.
+- Similar to ip-xact, there is an outer "device" element wrapper around "peripheral" elements
+    - When importing, do something similar to ip-xact:
+        device --> top-level addrmap
+            define in root using the name as-is
+        peripheral --> child
+            Also define in root using name prefixed by the device name?
+            Or maybe not at all?
+    - When exporting:
+        - if addrmap children are all addrmaps, push top addrmap --> "device" element
+        - otherwise, wrap a dummy "device" element
+        - make this configurable behavior!
+            default is to automatically promote the top addrmap to device
+            alternatively, force it to always wrap the thing in an additional device layer
+- Registers use "derivedFrom" linkages to inherit
+    when importing, dont bother trying to reuse the RDL type. Rather, keep a log of the xml
+    elements and roll them into each other
+- Single-dimension arrays
+    Does not seem to support multi-dimension arrays
+        Will need to flatten them to 1D arrays on export
+    On import, theres this %s vs [%s] nonsense that is specified
+        This probably should control whether the array is unrolled, or if it is arrayed
+        see this text to understand how the unrolling works. kinda neat:
+            https://www.keil.com/pack/doc/CMSIS/SVD/html/elem_special.html#dimElementGroup_gr
+- Fields can be arrays
+    On import, unroll them accoording to the %s thing. If not %s is used in <name>, then add a suffix
+- Fields do not have reset value. Regs do
+    Will have to bit-slice on import, bit-pack on export
+    Probably ignore the reset mask thing
+- enums are basically the same as ipxact
+    except theres this isDefault thing. Probably ok to discard on import
